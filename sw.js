@@ -1,5 +1,5 @@
 /* Reminderer service worker: offline shell, background nudges, notification buttons. */
-var CACHE = 'reminderer-v2';
+var CACHE = 'reminderer-v3';
 var ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {

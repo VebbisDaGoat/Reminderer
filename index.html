@@ -5,146 +5,236 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reminderer</title>
 <meta name="description" content="A checklist that keeps reminding you every few hours until each item is done.">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#edf1fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
-/* Layout: one narrow column, add-form on top, active list, then a collapsed done list. */
+/* Layout: one glass column over a soft gradient glow. Header with progress ring, add card, lists, quiet-times panel. */
 :root{
-  --bg:#f1f4f3; --surface:#ffffff; --fg:#13201c; --muted:#5a6a65; --line:#dbe3e0;
-  --accent:#0f766e; --accent-fg:#ffffff; --warn:#b45309; --warn-bg:#fdf1dd; --danger:#b42318;
-  --font:"Avenir Next","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",sans-serif;
+  --bg:#edf1fb; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff; --line:rgba(25,35,80,.10); --line-strong:rgba(70,85,140,.28);
+  --fg:#0f1630; --muted:#5b6586; --a1:#0ea5e9; --a2:#6366f1; --accent:#4f46e5; --btn-fg:#ffffff;
+  --warn:#b45309; --warn-bg:rgba(245,158,11,.16); --danger:#e11d48;
+  --shadow:0 10px 34px rgba(40,50,120,.10); --glow1:rgba(99,102,241,.26); --glow2:rgba(14,165,233,.22);
+  --font:"Plus Jakarta Sans","Avenir Next","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0d1412; --surface:#151f1c; --fg:#e5eeeb; --muted:#93a69f; --line:#25332f;
-    --accent:#3dd4c0; --accent-fg:#06211d; --warn:#f5b45c; --warn-bg:#2a2112; --danger:#ff8a80;
+    --bg:#070b16; --surface:rgba(255,255,255,.055); --surface-solid:#111936; --line:rgba(255,255,255,.10); --line-strong:rgba(160,175,230,.30);
+    --fg:#eef2ff; --muted:#93a0c6; --a1:#22d3ee; --a2:#818cf8; --accent:#a5b4fc; --btn-fg:#07102a;
+    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.14); --danger:#fb7185;
+    --shadow:0 14px 44px rgba(0,0,0,.45); --glow1:rgba(99,102,241,.30); --glow2:rgba(34,211,238,.18);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0d1412; --surface:#151f1c; --fg:#e5eeeb; --muted:#93a69f; --line:#25332f;
-  --accent:#3dd4c0; --accent-fg:#06211d; --warn:#f5b45c; --warn-bg:#2a2112; --danger:#ff8a80;
+  --bg:#070b16; --surface:rgba(255,255,255,.055); --surface-solid:#111936; --line:rgba(255,255,255,.10); --line-strong:rgba(160,175,230,.30);
+  --fg:#eef2ff; --muted:#93a0c6; --a1:#22d3ee; --a2:#818cf8; --accent:#a5b4fc; --btn-fg:#07102a;
+  --warn:#fbbf24; --warn-bg:rgba(251,191,36,.14); --danger:#fb7185;
+  --shadow:0 14px 44px rgba(0,0,0,.45); --glow1:rgba(99,102,241,.30); --glow2:rgba(34,211,238,.18);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+html{background:var(--bg)}
 html,body{margin:0}
 body{
-  background:var(--bg); color:var(--fg); font-family:var(--font); font-size:16px; line-height:1.45;
-  padding-block:max(20px,env(safe-area-inset-top,0px)) max(40px,env(safe-area-inset-bottom,0px));
+  position:relative; min-height:100vh; background:var(--bg); color:var(--fg);
+  font-family:var(--font); font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-block:max(26px,env(safe-area-inset-top,0px)) max(48px,env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
 }
-main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{margin:0;font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1}
-.sub{color:var(--muted);font-size:.9rem;margin-top:6px}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 12% 0%, var(--glow1), transparent 70%),
+    radial-gradient(55% 40% at 100% 8%, var(--glow2), transparent 70%),
+    radial-gradient(50% 40% at 50% 110%, var(--glow1), transparent 70%);
+}
+main{max-width:660px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
 button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600}
-.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
-.btn.small{padding:6px 10px;font-size:.85rem}
-.banner{background:var(--warn-bg);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+:focus-visible{outline:2px solid var(--a2);outline-offset:3px}
+.glass{
+  background:var(--surface); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4);
+}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.rise{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+h1{
+  margin:0;font-size:clamp(2rem,8vw,2.7rem);font-weight:800;letter-spacing:-.035em;line-height:1.05;
+  color:var(--fg);
+  background:linear-gradient(100deg,var(--a1),var(--a2) 70%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{color:var(--muted);font-size:.93rem;margin-top:6px}
+.install{margin-top:12px;border:1px solid var(--line-strong);background:transparent;border-radius:999px;padding:6px 14px;font-size:.84rem;font-weight:600;color:var(--fg)}
+.install:hover{background:var(--surface)}
+.ring{position:relative;width:72px;height:72px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:var(--line-strong);stroke-width:6;opacity:.55}
+.ring .bar{fill:none;stroke:url(#ringGrad);stroke-width:6;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:169.65;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:.95rem;font-variant-numeric:tabular-nums}
+
+/* banner */
+.banner{border-radius:18px;padding:13px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-bg);border:1px solid var(--line)}
 .banner p{margin:0;flex:1 1 220px;font-size:.92rem}
-form.add{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.row>*{min-width:0}
-input[type=text]{flex:1 1 220px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 12px}
-select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 10px}
-label.lbl{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-h2{margin:6px 0 0;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
-ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-li.item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start}
-.check{width:28px;height:28px;border-radius:50%;border:2px solid var(--muted);background:transparent;display:grid;place-items:center;padding:0;margin-top:1px}
-.check:hover{border-color:var(--accent)}
-.done .check{background:var(--accent);border-color:var(--accent)}
-.check svg{width:16px;height:16px;stroke:var(--accent-fg);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
-.done .check svg{opacity:1}
-.title{font-weight:600;overflow-wrap:anywhere}
-.done .title{text-decoration:line-through;color:var(--muted)}
-.meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:4px}
-.chip{background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:1px 8px;font-weight:600}
-.meta select{padding:3px 6px;font-size:.82rem;border-radius:8px}
-.del{border:0;background:transparent;color:var(--muted);padding:6px;border-radius:8px;font-size:1.1rem;line-height:1}
-.del:hover{color:var(--danger)}
-.empty{color:var(--muted);text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px;font-size:.95rem}
-details.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0}
-details.panel>summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none}
+.btn{border:1px solid var(--line-strong);background:transparent;border-radius:12px;padding:9px 16px;font-weight:600;transition:background .2s,transform .15s}
+.btn:hover{background:var(--surface)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:7px 13px;font-size:.86rem}
+
+/* add card */
+form.add{padding:16px;display:grid;gap:12px}
+.field{display:flex;gap:10px;align-items:center}
+input[type=text]{
+  width:100%;min-width:0;border:1px solid var(--line);background:rgba(127,140,190,.08);border-radius:14px;padding:13px 15px;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+}
+input[type=text]::placeholder{color:var(--muted)}
+input[type=text]:focus{outline:none;border-color:var(--a2);box-shadow:0 0 0 4px color-mix(in srgb,var(--a2) 22%,transparent)}
+.add-btn{flex:none;width:50px;height:50px;border-radius:15px;border:0;background:linear-gradient(135deg,var(--a1),var(--a2));display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--a2) 40%,transparent);transition:transform .15s,filter .2s}
+.add-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.add-btn:active{transform:scale(.94)}
+.add-btn svg{width:22px;height:22px;stroke:var(--btn-fg);stroke-width:2.6;stroke-linecap:round;fill:none}
+.lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.every{display:grid;gap:8px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 13px;font-size:.88rem;font-weight:600;color:var(--muted);transition:all .18s}
+.chips button:hover{color:var(--fg);border-color:var(--line-strong)}
+.chips button[aria-pressed="true"]{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
+
+/* lists */
+.sec-head{display:flex;align-items:center;gap:10px;margin:0 2px 10px}
+h2{margin:0;font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.count{font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;min-width:22px;text-align:center}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+li.item{
+  padding:14px 14px 14px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:start;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .2s,opacity .3s,box-shadow .25s;
+}
+li.item:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+li.item.enter{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+li.item.leaving{opacity:0;transform:translateX(14px) scale(.97)}
+li.item.due{border-color:color-mix(in srgb,var(--warn) 55%,transparent);box-shadow:var(--shadow),0 0 0 1px color-mix(in srgb,var(--warn) 25%,transparent)}
+.check{width:30px;height:30px;border-radius:50%;border:2px solid var(--line-strong);background:transparent;display:grid;place-items:center;padding:0;margin-top:1px;transition:background .25s,border-color .25s,transform .15s}
+.check:hover{border-color:var(--a2);transform:scale(1.06)}
+.check:active{transform:scale(.92)}
+.check svg{width:16px;height:16px;stroke:var(--btn-fg);fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .35s ease .05s}
+.done .check{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent}
+.done .check svg{stroke-dashoffset:0}
+.title{font-weight:600;overflow-wrap:anywhere;transition:color .3s}
+.done .title{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.note-line{font-size:.88rem;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:8px}
+.meta select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:rgba(127,140,190,.10);border-radius:999px;padding:3px 26px 3px 11px;font-size:.8rem;font-weight:600;color:var(--fg);cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.meta select option{background:var(--surface-solid);color:var(--fg)}
+.chip{background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:2px 10px;font-weight:700;font-size:.78rem}
+.del{border:0;background:transparent;color:var(--muted);width:32px;height:32px;border-radius:10px;font-size:1.3rem;line-height:1;transition:color .2s,background .2s}
+.del:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent)}
+#doneList li.item{opacity:.75}
+.empty{padding:34px 18px;text-align:center;color:var(--muted);font-size:.95rem;display:grid;gap:12px;justify-items:center;border-style:dashed}
+.empty svg{width:42px;height:42px;stroke:var(--a2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+
+/* quiet times */
+details.panel{padding:0;overflow:hidden}
+details.panel>summary{cursor:pointer;padding:16px 18px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
 details.panel>summary::-webkit-details-marker{display:none}
-details.panel .body{padding:0 14px 14px;display:grid;gap:12px}
-.switch{display:flex;gap:10px;align-items:center}
-.switch input{width:18px;height:18px;accent-color:var(--accent)}
-.block{display:grid;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-.time{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px}
+details.panel>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .25s}
+details.panel[open]>summary::after{transform:rotate(-135deg)}
+details.panel .body{padding:0 18px 18px;display:grid;gap:16px}
+.block{display:grid;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.switch{display:flex;gap:12px;align-items:center;font-weight:600;cursor:pointer}
+.tgl{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:999px;background:var(--line-strong);position:relative;cursor:pointer;transition:background .25s;margin:0}
+.tgl::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.tgl:checked{background:linear-gradient(135deg,var(--a1),var(--a2))}
+.tgl:checked::after{transform:translateX(18px)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.tfield{display:grid;gap:5px}
+.time{border:1px solid var(--line);background:rgba(127,140,190,.10);border-radius:12px;padding:9px 12px;min-width:120px}
 .days{display:flex;gap:6px;flex-wrap:wrap}
-.days button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font-size:.85rem;font-weight:600;color:var(--muted)}
-.days button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.days button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:.84rem;font-weight:600;color:var(--muted);transition:all .18s}
+.days button[aria-pressed="true"]{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
 .note{font-size:.82rem;color:var(--muted);margin:0}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px,env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s}
-.toast.show{opacity:1}
-@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+.toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);background:var(--surface-solid);color:var(--fg);border:1px solid var(--line-strong);box-shadow:var(--shadow);padding:11px 18px;border-radius:999px;font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
 <main>
-  <header>
+  <header class="rise">
     <div>
       <h1>Reminderer</h1>
       <div class="sub" id="summary">Loading…</div>
+      <button class="install" id="installBtn" hidden>Install app</button>
     </div>
-    <button class="btn small" id="installBtn" hidden>Install app</button>
+    <div class="ring" id="ring" role="img" aria-label="Progress">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs>
+        <circle class="track" cx="32" cy="32" r="27"/>
+        <circle class="bar" id="ringBar" cx="32" cy="32" r="27"/>
+      </svg>
+      <div class="num" id="ringNum">0/0</div>
+    </div>
   </header>
 
-  <div class="banner" id="notifBanner" hidden>
+  <div class="banner rise" id="notifBanner" hidden>
     <p id="notifText"></p>
     <button class="btn primary small" id="notifBtn" hidden>Turn on notifications</button>
   </div>
 
-  <form class="add" id="addForm">
-    <div class="row">
-      <label class="lbl" style="flex:1 1 220px">What do you need to do?
-        <input type="text" id="titleIn" maxlength="140" placeholder="e.g. Call the pharmacy" required autocomplete="off">
-      </label>
+  <form class="add glass rise" id="addForm" style="animation-delay:.05s">
+    <div class="field">
+      <input type="text" id="titleIn" maxlength="140" placeholder="What do you need to remember?" required autocomplete="off" aria-label="Reminder">
+      <button class="add-btn" type="submit" aria-label="Add reminder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
-    <div class="row" style="align-items:flex-end">
-      <label class="lbl">Remind me every
-        <select id="everyIn"></select>
-      </label>
-      <label class="lbl" style="flex:1 1 160px">Note (optional)
-        <input type="text" id="noteIn" maxlength="200" placeholder="Shown in the notification" autocomplete="off">
-      </label>
-      <button class="btn primary" type="submit">Add</button>
+    <input type="text" id="noteIn" maxlength="200" placeholder="Add a note (optional)" autocomplete="off" aria-label="Note">
+    <div class="every">
+      <span class="lbl" id="everyLbl">Remind me every</span>
+      <div class="chips" id="everyChips" role="group" aria-labelledby="everyLbl"></div>
     </div>
   </form>
 
-  <section>
-    <h2>To do</h2>
+  <section class="rise" style="animation-delay:.1s">
+    <div class="sec-head"><h2>To do</h2><span class="count" id="activeCount">0</span></div>
     <ul id="activeList"></ul>
   </section>
 
   <section id="doneSection" hidden>
-    <h2>Done</h2>
+    <div class="sec-head"><h2>Done</h2><span class="count" id="doneCount">0</span></div>
     <ul id="doneList"></ul>
-    <div class="row" style="margin-top:10px"><button class="btn small" id="clearDone" type="button">Clear done items</button></div>
+    <div class="row" style="margin-top:12px"><button class="btn small" id="clearDone" type="button">Clear done items</button></div>
   </section>
 
-  <details class="panel" open>
+  <details class="panel glass rise" open style="animation-delay:.15s">
     <summary>Quiet times</summary>
     <div class="body">
       <div class="block">
-        <label class="switch"><input type="checkbox" id="quietOn"> Quiet hours (sleep)</label>
+        <label class="switch"><input type="checkbox" class="tgl" id="quietOn"> Quiet hours (sleep)</label>
         <div class="row">
-          <label class="lbl">From <input type="time" id="qStart" class="time"></label>
-          <label class="lbl">Until <input type="time" id="qEnd" class="time"></label>
+          <label class="tfield"><span class="lbl">From</span><input type="time" id="qStart" class="time"></label>
+          <label class="tfield"><span class="lbl">Until</span><input type="time" id="qEnd" class="time"></label>
         </div>
       </div>
       <div class="block">
-        <label class="switch"><input type="checkbox" id="schoolOn"> School hours</label>
+        <label class="switch"><input type="checkbox" class="tgl" id="schoolOn"> School hours</label>
         <div class="row">
-          <label class="lbl">From <input type="time" id="sStart" class="time"></label>
-          <label class="lbl">Until <input type="time" id="sEnd" class="time"></label>
+          <label class="tfield"><span class="lbl">From</span><input type="time" id="sStart" class="time"></label>
+          <label class="tfield"><span class="lbl">Until</span><input type="time" id="sEnd" class="time"></label>
         </div>
         <div class="days" id="schoolDays" role="group" aria-label="School days"></div>
       </div>
@@ -161,7 +251,7 @@ details.panel .body{padding:0 14px 14px;display:grid;gap:12px}
 'use strict';
 var INTERVALS=[1,2,3,4,6,8,12,24];
 var state={items:[],settings:{quietOn:true,qStart:'22:00',qEnd:'08:00',schoolOn:false,sStart:'08:30',sEnd:'15:00',schoolDays:[1,2,3,4,5]}};
-var deferredInstall=null;
+var deferredInstall=null, selectedEvery=3, seen={}, enterIdx=0;
 
 /* ---------- storage (IndexedDB, shared with the service worker) ---------- */
 function db(){return new Promise(function(res,rej){var r=indexedDB.open('nudge',1);r.onupgradeneeded=function(){r.result.createObjectStore('kv')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
@@ -194,7 +284,7 @@ function fmtTime(ts){
   return d.toLocaleDateString([],{weekday:'short'})+' '+t;
 }
 function everyLabel(h){return h===24?'day':h+' h'}
-function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},2200)}
+function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},2300)}
 
 /* ---------- notifications ---------- */
 function notify(item){
@@ -206,14 +296,19 @@ function notify(item){
     navigator.serviceWorker.ready.then(function(reg){reg.showNotification(item.title,opts)}).catch(function(){try{new Notification(item.title,{body:opts.body,tag:item.id})}catch(e){}});
   }else{try{new Notification(item.title,{body:opts.body,tag:item.id})}catch(e){}}
 }
+function safeRender(){
+  var ae=document.activeElement;
+  if(ae&&ae.tagName==='SELECT'&&ae.closest('#activeList'))return;
+  render();
+}
 function check(){
-  if(inQuiet(new Date()))return render();
+  if(inQuiet(new Date()))return safeRender();
   var now=Date.now(), changed=false;
   state.items.forEach(function(it){
     if(!it.done&&it.nextDue<=now){notify(it);it.nextDue=now+it.everyH*3600000;changed=true}
   });
   if(changed)save();
-  render();
+  safeRender();
 }
 function registerPeriodic(){
   if(!navigator.serviceWorker)return;
@@ -234,13 +329,17 @@ function updateBanner(){
 /* ---------- rendering ---------- */
 var CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function buildItem(it){
-  var li=document.createElement('li');li.className='item'+(it.done?' done':'');
+  var li=document.createElement('li');li.className='item glass'+(it.done?' done':'');
+  if(!seen[it.id]){seen[it.id]=1;li.classList.add('enter');li.style.animationDelay=Math.min(enterIdx++,8)*45+'ms'}
   var cb=document.createElement('button');cb.className='check';cb.type='button';cb.innerHTML=CHECK;
   cb.setAttribute('aria-label',(it.done?'Mark not done: ':'Mark done: ')+it.title);
-  cb.addEventListener('click',function(){toggle(it.id)});
-  var mid=document.createElement('div');
+  cb.addEventListener('click',function(){
+    if(!it.done){li.classList.add('done');setTimeout(function(){li.classList.add('leaving')},260);setTimeout(function(){toggle(it.id)},560)}
+    else toggle(it.id);
+  });
+  var mid=document.createElement('div');mid.style.minWidth='0';
   var t=document.createElement('div');t.className='title';t.textContent=it.title;mid.appendChild(t);
-  if(it.note){var n=document.createElement('div');n.className='meta';n.textContent=it.note;mid.appendChild(n)}
+  if(it.note){var n=document.createElement('div');n.className='note-line';n.textContent=it.note;mid.appendChild(n)}
   var meta=document.createElement('div');meta.className='meta';
   if(it.done){meta.appendChild(document.createTextNode('Done '+fmtTime(it.doneAt)))}
   else{
@@ -249,24 +348,36 @@ function buildItem(it){
     sel.addEventListener('change',function(){it.everyH=+sel.value;it.nextDue=Date.now()+it.everyH*3600000;save();render()});
     meta.appendChild(sel);
     var due=it.nextDue<=Date.now();
-    if(due){var r=pauseReason(new Date());var c=document.createElement('span');c.className='chip';c.textContent=r?'Paused for '+r:'Reminder due';meta.appendChild(c)}
+    if(due){li.classList.add('due');var r=pauseReason(new Date());var c=document.createElement('span');c.className='chip';c.textContent=r?'Paused for '+r:'Reminder due';meta.appendChild(c)}
     else meta.appendChild(document.createTextNode('Next reminder '+fmtTime(it.nextDue)));
   }
   mid.appendChild(meta);
   var del=document.createElement('button');del.className='del';del.type='button';del.innerHTML='&times;';del.setAttribute('aria-label','Delete '+it.title);
-  del.addEventListener('click',function(){remove(it.id)});
+  del.addEventListener('click',function(){li.classList.add('leaving');setTimeout(function(){remove(it.id)},300)});
   li.appendChild(cb);li.appendChild(mid);li.appendChild(del);return li;
 }
+var EMPTY_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>';
 function render(){
+  enterIdx=0;
   var active=state.items.filter(function(i){return !i.done}).sort(function(a,b){return a.nextDue-b.nextDue});
   var done=state.items.filter(function(i){return i.done}).sort(function(a,b){return b.doneAt-a.doneAt});
   var al=$('#activeList');al.textContent='';
-  if(!active.length){var e=document.createElement('div');e.className='empty';e.textContent=state.items.length?'All caught up. Nothing left to remind you about.':'Add your first reminder above. Reminderer will keep reminding you until you check it off.';al.appendChild(e)}
+  if(!active.length){
+    var e=document.createElement('div');e.className='empty glass';
+    e.innerHTML=EMPTY_ICON;
+    var p=document.createElement('div');p.textContent=state.items.length?'All caught up. Nothing left to remind you about.':'Add your first reminder above. Reminderer will keep reminding you until you check it off.';
+    e.appendChild(p);al.appendChild(e);
+  }
   active.forEach(function(i){al.appendChild(buildItem(i))});
   var dl=$('#doneList');dl.textContent='';done.forEach(function(i){dl.appendChild(buildItem(i))});
   $('#doneSection').hidden=!done.length;
+  $('#activeCount').textContent=active.length;$('#doneCount').textContent=done.length;
   var pr=pauseReason(new Date());
   $('#summary').textContent=(active.length?(active.length+(active.length===1?' reminder':' reminders')+' still open'):'Nothing open')+(pr?' · paused for '+pr:'');
+  var total=state.items.length, ratio=total?done.length/total:0;
+  $('#ringBar').style.strokeDashoffset=String(169.65*(1-ratio));
+  $('#ringNum').textContent=done.length+'/'+total;
+  $('#ring').setAttribute('aria-label',done.length+' of '+total+' done');
 }
 
 /* ---------- actions ---------- */
@@ -281,7 +392,7 @@ function remove(id){state.items=state.items.filter(function(i){return i.id!==id}
 $('#addForm').addEventListener('submit',function(e){
   e.preventDefault();
   var title=$('#titleIn').value.trim();if(!title)return;
-  var h=+$('#everyIn').value;
+  var h=selectedEvery;
   state.items.push({id:uid(),title:title,note:$('#noteIn').value.trim(),everyH:h,nextDue:Date.now()+h*3600000,done:false,created:Date.now()});
   $('#titleIn').value='';$('#noteIn').value='';
   save();render();
@@ -296,6 +407,22 @@ $('#testBtn').addEventListener('click',function(){
   if(!('Notification' in window)||Notification.permission!=='granted'){toast('Turn on notifications first');updateBanner();return}
   notify({id:'test',title:'Test from Reminderer',note:'Notifications are working.'});
 });
+
+/* interval chips for the add form */
+(function(){
+  var wrap=$('#everyChips');
+  INTERVALS.forEach(function(h){
+    var b=document.createElement('button');b.type='button';b.textContent=h===24?'1 day':h+' h';
+    b.setAttribute('aria-pressed',h===selectedEvery?'true':'false');
+    b.addEventListener('click',function(){
+      selectedEvery=h;
+      Array.prototype.forEach.call(wrap.children,function(c){c.setAttribute('aria-pressed','false')});
+      b.setAttribute('aria-pressed','true');
+    });
+    wrap.appendChild(b);
+  });
+})();
+
 function bindSettings(){
   var s=state.settings;
   $('#quietOn').checked=!!s.quietOn;$('#qStart').value=s.qStart;$('#qEnd').value=s.qEnd;
@@ -319,7 +446,6 @@ function bindSettings(){
     wrap.appendChild(b);
   });
 }
-var ev=$('#everyIn');INTERVALS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent=h===24?'Every day':'Every '+h+(h===1?' hour':' hours');if(h===3)o.selected=true;ev.appendChild(o)});
 
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;$('#installBtn').hidden=false});
 $('#installBtn').addEventListener('click',function(){
