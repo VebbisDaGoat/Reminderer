@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reminderer</title>
+<meta name="description" content="A checklist that keeps reminding you every few hours until each item is done.">
+<meta name="theme-color" content="#edf1fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070b16" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one glass column over a soft gradient glow. Header with progress ring, add card, lists, quiet-times panel. */
+:root{
+  --bg:#edf1fb; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff; --line:rgba(25,35,80,.10); --line-strong:rgba(70,85,140,.28);
+  --fg:#0f1630; --muted:#5b6586; --a1:#0ea5e9; --a2:#6366f1; --accent:#4f46e5; --btn-fg:#ffffff;
+  --warn:#b45309; --warn-bg:rgba(245,158,11,.16); --danger:#e11d48;
+  --shadow:0 10px 34px rgba(40,50,120,.10); --glow1:rgba(99,102,241,.26); --glow2:rgba(14,165,233,.22);
+  --font:"Plus Jakarta Sans","Avenir Next","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#070b16; --surface:rgba(255,255,255,.055); --surface-solid:#111936; --line:rgba(255,255,255,.10); --line-strong:rgba(160,175,230,.30);
+    --fg:#eef2ff; --muted:#93a0c6; --a1:#22d3ee; --a2:#818cf8; --accent:#a5b4fc; --btn-fg:#07102a;
+    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.14); --danger:#fb7185;
+    --shadow:0 14px 44px rgba(0,0,0,.45); --glow1:rgba(99,102,241,.30); --glow2:rgba(34,211,238,.18);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#070b16; --surface:rgba(255,255,255,.055); --surface-solid:#111936; --line:rgba(255,255,255,.10); --line-strong:rgba(160,175,230,.30);
+  --fg:#eef2ff; --muted:#93a0c6; --a1:#22d3ee; --a2:#818cf8; --accent:#a5b4fc; --btn-fg:#07102a;
+  --warn:#fbbf24; --warn-bg:rgba(251,191,36,.14); --danger:#fb7185;
+  --shadow:0 14px 44px rgba(0,0,0,.45); --glow1:rgba(99,102,241,.30); --glow2:rgba(34,211,238,.18);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+html,body{margin:0}
+body{
+  position:relative; min-height:100vh; background:var(--bg); color:var(--fg);
+  font-family:var(--font); font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-block:max(26px,env(safe-area-inset-top,0px)) max(48px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(60% 45% at 12% 0%, var(--glow1), transparent 70%),
+    radial-gradient(55% 40% at 100% 8%, var(--glow2), transparent 70%),
+    radial-gradient(50% 40% at 50% 110%, var(--glow1), transparent 70%);
+}
+main{max-width:660px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--a2);outline-offset:3px}
+.glass{
+  background:var(--surface); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4);
+}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.rise{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+h1{
+  margin:0;font-size:clamp(2rem,8vw,2.7rem);font-weight:800;letter-spacing:-.035em;line-height:1.05;
+  color:var(--fg);
+  background:linear-gradient(100deg,var(--a1),var(--a2) 70%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sub{color:var(--muted);font-size:.93rem;margin-top:6px}
+.install{margin-top:12px;border:1px solid var(--line-strong);background:transparent;border-radius:999px;padding:6px 14px;font-size:.84rem;font-weight:600;color:var(--fg)}
+.install:hover{background:var(--surface)}
+.ring{position:relative;width:72px;height:72px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{fill:none;stroke:var(--line-strong);stroke-width:6;opacity:.55}
+.ring .bar{fill:none;stroke:url(#ringGrad);stroke-width:6;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:169.65;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:.95rem;font-variant-numeric:tabular-nums}
+
+/* banner */
+.banner{border-radius:18px;padding:13px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-bg);border:1px solid var(--line)}
+.banner p{margin:0;flex:1 1 220px;font-size:.92rem}
+.btn{border:1px solid var(--line-strong);background:transparent;border-radius:12px;padding:9px 16px;font-weight:600;transition:background .2s,transform .15s}
+.btn:hover{background:var(--surface)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:7px 13px;font-size:.86rem}
+
+/* add card */
+form.add{padding:16px;display:grid;gap:12px}
+.field{display:flex;gap:10px;align-items:center}
+input[type=text]{
+  width:100%;min-width:0;border:1px solid var(--line);background:rgba(127,140,190,.08);border-radius:14px;padding:13px 15px;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+}
+input[type=text]::placeholder{color:var(--muted)}
+input[type=text]:focus{outline:none;border-color:var(--a2);box-shadow:0 0 0 4px color-mix(in srgb,var(--a2) 22%,transparent)}
+.add-btn{flex:none;width:50px;height:50px;border-radius:15px;border:0;background:linear-gradient(135deg,var(--a1),var(--a2));display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--a2) 40%,transparent);transition:transform .15s,filter .2s}
+.add-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.add-btn:active{transform:scale(.94)}
+.add-btn svg{width:22px;height:22px;stroke:var(--btn-fg);stroke-width:2.6;stroke-linecap:round;fill:none}
+.lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.every{display:grid;gap:8px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 13px;font-size:.88rem;font-weight:600;color:var(--muted);transition:all .18s}
+.chips button:hover{color:var(--fg);border-color:var(--line-strong)}
+.chips button[aria-pressed="true"]{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
+
+/* lists */
+.sec-head{display:flex;align-items:center;gap:10px;margin:0 2px 10px}
+h2{margin:0;font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.count{font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 8px;min-width:22px;text-align:center}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+li.item{
+  padding:14px 14px 14px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:start;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .2s,opacity .3s,box-shadow .25s;
+}
+li.item:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+li.item.enter{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+li.item.leaving{opacity:0;transform:translateX(14px) scale(.97)}
+li.item.due{border-color:color-mix(in srgb,var(--warn) 55%,transparent);box-shadow:var(--shadow),0 0 0 1px color-mix(in srgb,var(--warn) 25%,transparent)}
+.check{width:30px;height:30px;border-radius:50%;border:2px solid var(--line-strong);background:transparent;display:grid;place-items:center;padding:0;margin-top:1px;transition:background .25s,border-color .25s,transform .15s}
+.check:hover{border-color:var(--a2);transform:scale(1.06)}
+.check:active{transform:scale(.92)}
+.check svg{width:16px;height:16px;stroke:var(--btn-fg);fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .35s ease .05s}
+.done .check{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent}
+.done .check svg{stroke-dashoffset:0}
+.title{font-weight:600;overflow-wrap:anywhere;transition:color .3s}
+.done .title{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.note-line{font-size:.88rem;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:8px}
+.meta select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:rgba(127,140,190,.10);border-radius:999px;padding:3px 26px 3px 11px;font-size:.8rem;font-weight:600;color:var(--fg);cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.meta select option{background:var(--surface-solid);color:var(--fg)}
+.chip{background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:2px 10px;font-weight:700;font-size:.78rem}
+.del{border:0;background:transparent;color:var(--muted);width:32px;height:32px;border-radius:10px;font-size:1.3rem;line-height:1;transition:color .2s,background .2s}
+.del:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent)}
+#doneList li.item{opacity:.75}
+.empty{padding:34px 18px;text-align:center;color:var(--muted);font-size:.95rem;display:grid;gap:12px;justify-items:center;border-style:dashed}
+.empty svg{width:42px;height:42px;stroke:var(--a2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+
+/* quiet times */
+details.panel{padding:0;overflow:hidden}
+details.panel>summary{cursor:pointer;padding:16px 18px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .25s}
+details.panel[open]>summary::after{transform:rotate(-135deg)}
+details.panel .body{padding:0 18px 18px;display:grid;gap:16px}
+.block{display:grid;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.switch{display:flex;gap:12px;align-items:center;font-weight:600;cursor:pointer}
+.tgl{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:999px;background:var(--line-strong);position:relative;cursor:pointer;transition:background .25s;margin:0}
+.tgl::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.tgl:checked{background:linear-gradient(135deg,var(--a1),var(--a2))}
+.tgl:checked::after{transform:translateX(18px)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.tfield{display:grid;gap:5px}
+.time{border:1px solid var(--line);background:rgba(127,140,190,.10);border-radius:12px;padding:9px 12px;min-width:120px}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:.84rem;font-weight:600;color:var(--muted);transition:all .18s}
+.days button[aria-pressed="true"]{background:linear-gradient(135deg,var(--a1),var(--a2));color:var(--btn-fg);border-color:transparent}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+
+.toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);background:var(--surface-solid);color:var(--fg);border:1px solid var(--line-strong);box-shadow:var(--shadow);padding:11px 18px;border-radius:999px;font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="rise">
+    <div>
+      <h1>Reminderer</h1>
+      <div class="sub" id="summary">Loading…</div>
+      <button class="install" id="installBtn" hidden>Install app</button>
+    </div>
+    <div class="ring" id="ring" role="img" aria-label="Progress">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a1)"/><stop offset="1" style="stop-color:var(--a2)"/></linearGradient></defs>
+        <circle class="track" cx="32" cy="32" r="27"/>
+        <circle class="bar" id="ringBar" cx="32" cy="32" r="27"/>
+      </svg>
+      <div class="num" id="ringNum">0/0</div>
+    </div>
+  </header>
+
+  <div class="banner rise" id="notifBanner" hidden>
+    <p id="notifText"></p>
+    <button class="btn primary small" id="notifBtn" hidden>Turn on notifications</button>
+  </div>
+
+  <form class="add glass rise" id="addForm" style="animation-delay:.05s">
+    <div class="field">
+      <input type="text" id="titleIn" maxlength="140" placeholder="What do you need to remember?" required autocomplete="off" aria-label="Reminder">
+      <button class="add-btn" type="submit" aria-label="Add reminder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <input type="text" id="noteIn" maxlength="200" placeholder="Add a note (optional)" autocomplete="off" aria-label="Note">
+    <div class="every">
+      <span class="lbl" id="everyLbl">Remind me every</span>
+      <div class="chips" id="everyChips" role="group" aria-labelledby="everyLbl"></div>
+    </div>
+  </form>
+
+  <section class="rise" style="animation-delay:.1s">
+    <div class="sec-head"><h2>To do</h2><span class="count" id="activeCount">0</span></div>
+    <ul id="activeList"></ul>
+  </section>
+
+  <section id="doneSection" hidden>
+    <div class="sec-head"><h2>Done</h2><span class="count" id="doneCount">0</span></div>
+    <ul id="doneList"></ul>
+    <div class="row" style="margin-top:12px"><button class="btn small" id="clearDone" type="button">Clear done items</button></div>
+  </section>
+
+  <details class="panel glass rise" open style="animation-delay:.15s">
+    <summary>Quiet times</summary>
+    <div class="body">
+      <div class="block">
+        <label class="switch"><input type="checkbox" class="tgl" id="quietOn"> Quiet hours (sleep)</label>
+        <div class="row">
+          <label class="tfield"><span class="lbl">From</span><input type="time" id="qStart" class="time"></label>
+          <label class="tfield"><span class="lbl">Until</span><input type="time" id="qEnd" class="time"></label>
+        </div>
+      </div>
+      <div class="block">
+        <label class="switch"><input type="checkbox" class="tgl" id="schoolOn"> School hours</label>
+        <div class="row">
+          <label class="tfield"><span class="lbl">From</span><input type="time" id="sStart" class="time"></label>
+          <label class="tfield"><span class="lbl">Until</span><input type="time" id="sEnd" class="time"></label>
+        </div>
+        <div class="days" id="schoolDays" role="group" aria-label="School days"></div>
+      </div>
+      <p class="note">No notifications are sent during these times. Anything that comes due is sent as soon as they end.</p>
+      <div class="row"><button class="btn small" id="testBtn" type="button">Send a test notification</button></div>
+      <p class="note">Reminders are saved on this device only. Notifications fire while the app is open or running in the background; if your phone or browser fully closes it, they resume the next time you open it.</p>
+    </div>
+  </details>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+'use strict';
+var INTERVALS=[1,2,3,4,6,8,12,24];
+var state={items:[],settings:{quietOn:true,qStart:'22:00',qEnd:'08:00',schoolOn:false,sStart:'08:30',sEnd:'15:00',schoolDays:[1,2,3,4,5]}};
+var deferredInstall=null, selectedEvery=3, seen={}, enterIdx=0;
+
+/* ---------- storage (IndexedDB, shared with the service worker) ---------- */
+function db(){return new Promise(function(res,rej){var r=indexedDB.open('nudge',1);r.onupgradeneeded=function(){r.result.createObjectStore('kv')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function kvGet(k){return db().then(function(d){return new Promise(function(res,rej){var q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=function(){res(q.result)};q.onerror=function(){rej(q.error)}})})}
+function kvSet(k,v){return db().then(function(d){return new Promise(function(res,rej){var t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){res()};t.onerror=function(){rej(t.error)}})})}
+function load(){
+  return Promise.all([kvGet('items'),kvGet('settings')]).then(function(r){
+    if(Array.isArray(r[0]))state.items=r[0];
+    if(r[1])state.settings=Object.assign(state.settings,r[1]);
+  }).catch(function(){});
+}
+function save(){return Promise.all([kvSet('items',state.items),kvSet('settings',state.settings)]).catch(function(){toast('Could not save. Storage may be blocked.')})}
+
+/* ---------- helpers ---------- */
+var $=function(s){return document.querySelector(s)};
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function mins(hhmm){var p=String(hhmm).split(':');return (+p[0])*60+(+p[1]||0)}
+function inRange(n,a,b){if(a===b)return false;return a<b?(n>=a&&n<b):(n>=a||n<b)}
+function pauseReason(d){
+  var s=state.settings, n=d.getHours()*60+d.getMinutes();
+  if(s.quietOn&&inRange(n,mins(s.qStart),mins(s.qEnd)))return 'quiet hours';
+  if(s.schoolOn&&(s.schoolDays||[]).indexOf(d.getDay())>-1&&inRange(n,mins(s.sStart),mins(s.sEnd)))return 'school';
+  return '';
+}
+function inQuiet(d){return !!pauseReason(d)}
+function fmtTime(ts){
+  var d=new Date(ts), now=new Date();
+  var t=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(d.toDateString()===now.toDateString())return t;
+  return d.toLocaleDateString([],{weekday:'short'})+' '+t;
+}
+function everyLabel(h){return h===24?'day':h+' h'}
+function toast(msg){var t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},2300)}
+
+/* ---------- notifications ---------- */
+function notify(item){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  var opts={body:item.note||'Still not checked off. Tap to open.',tag:item.id,renotify:true,
+    icon:'icons/icon-192.png',badge:'icons/icon-192.png',data:{id:item.id},
+    actions:[{action:'done',title:'Done'},{action:'snooze',title:'Snooze 1 h'}]};
+  if(navigator.serviceWorker&&navigator.serviceWorker.ready){
+    navigator.serviceWorker.ready.then(function(reg){reg.showNotification(item.title,opts)}).catch(function(){try{new Notification(item.title,{body:opts.body,tag:item.id})}catch(e){}});
+  }else{try{new Notification(item.title,{body:opts.body,tag:item.id})}catch(e){}}
+}
+function safeRender(){
+  var ae=document.activeElement;
+  if(ae&&ae.tagName==='SELECT'&&ae.closest('#activeList'))return;
+  render();
+}
+function check(){
+  if(inQuiet(new Date()))return safeRender();
+  var now=Date.now(), changed=false;
+  state.items.forEach(function(it){
+    if(!it.done&&it.nextDue<=now){notify(it);it.nextDue=now+it.everyH*3600000;changed=true}
+  });
+  if(changed)save();
+  safeRender();
+}
+function registerPeriodic(){
+  if(!navigator.serviceWorker)return;
+  navigator.serviceWorker.ready.then(function(reg){
+    if('periodicSync' in reg){reg.periodicSync.register('nudge-check',{minInterval:60*60*1000}).catch(function(){})}
+  }).catch(function(){});
+}
+function updateBanner(){
+  var b=$('#notifBanner'),txt=$('#notifText'),btn=$('#notifBtn');
+  if(!('Notification' in window)){b.hidden=false;txt.textContent='This browser does not support notifications. You can still use the checklist.';btn.hidden=true;return}
+  if(!window.isSecureContext){b.hidden=false;txt.textContent='Notifications need the app to be served over HTTPS.';btn.hidden=true;return}
+  var p=Notification.permission;
+  if(p==='granted'){b.hidden=true;registerPeriodic()}
+  else if(p==='denied'){b.hidden=false;btn.hidden=true;txt.textContent='Notifications are blocked. Allow them in your browser or site settings to get reminders.'}
+  else{b.hidden=false;btn.hidden=false;txt.textContent='Turn on notifications so Reminderer can remind you every few hours.'}
+}
+
+/* ---------- rendering ---------- */
+var CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function buildItem(it){
+  var li=document.createElement('li');li.className='item glass'+(it.done?' done':'');
+  if(!seen[it.id]){seen[it.id]=1;li.classList.add('enter');li.style.animationDelay=Math.min(enterIdx++,8)*45+'ms'}
+  var cb=document.createElement('button');cb.className='check';cb.type='button';cb.innerHTML=CHECK;
+  cb.setAttribute('aria-label',(it.done?'Mark not done: ':'Mark done: ')+it.title);
+  cb.addEventListener('click',function(){
+    if(!it.done){li.classList.add('done');setTimeout(function(){li.classList.add('leaving')},260);setTimeout(function(){toggle(it.id)},560)}
+    else toggle(it.id);
+  });
+  var mid=document.createElement('div');mid.style.minWidth='0';
+  var t=document.createElement('div');t.className='title';t.textContent=it.title;mid.appendChild(t);
+  if(it.note){var n=document.createElement('div');n.className='note-line';n.textContent=it.note;mid.appendChild(n)}
+  var meta=document.createElement('div');meta.className='meta';
+  if(it.done){meta.appendChild(document.createTextNode('Done '+fmtTime(it.doneAt)))}
+  else{
+    var sel=document.createElement('select');sel.setAttribute('aria-label','Repeat interval for '+it.title);
+    INTERVALS.forEach(function(h){var o=document.createElement('option');o.value=h;o.textContent='Every '+everyLabel(h);if(h===it.everyH)o.selected=true;sel.appendChild(o)});
+    sel.addEventListener('change',function(){it.everyH=+sel.value;it.nextDue=Date.now()+it.everyH*3600000;save();render()});
+    meta.appendChild(sel);
+    var due=it.nextDue<=Date.now();
+    if(due){li.classList.add('due');var r=pauseReason(new Date());var c=document.createElement('span');c.className='chip';c.textContent=r?'Paused for '+r:'Reminder due';meta.appendChild(c)}
+    else meta.appendChild(document.createTextNode('Next reminder '+fmtTime(it.nextDue)));
+  }
+  mid.appendChild(meta);
+  var del=document.createElement('button');del.className='del';del.type='button';del.innerHTML='&times;';del.setAttribute('aria-label','Delete '+it.title);
+  del.addEventListener('click',function(){li.classList.add('leaving');setTimeout(function(){remove(it.id)},300)});
+  li.appendChild(cb);li.appendChild(mid);li.appendChild(del);return li;
+}
+var EMPTY_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>';
+function render(){
+  enterIdx=0;
+  var active=state.items.filter(function(i){return !i.done}).sort(function(a,b){return a.nextDue-b.nextDue});
+  var done=state.items.filter(function(i){return i.done}).sort(function(a,b){return b.doneAt-a.doneAt});
+  var al=$('#activeList');al.textContent='';
+  if(!active.length){
+    var e=document.createElement('div');e.className='empty glass';
+    e.innerHTML=EMPTY_ICON;
+    var p=document.createElement('div');p.textContent=state.items.length?'All caught up. Nothing left to remind you about.':'Add your first reminder above. Reminderer will keep reminding you until you check it off.';
+    e.appendChild(p);al.appendChild(e);
+  }
+  active.forEach(function(i){al.appendChild(buildItem(i))});
+  var dl=$('#doneList');dl.textContent='';done.forEach(function(i){dl.appendChild(buildItem(i))});
+  $('#doneSection').hidden=!done.length;
+  $('#activeCount').textContent=active.length;$('#doneCount').textContent=done.length;
+  var pr=pauseReason(new Date());
+  $('#summary').textContent=(active.length?(active.length+(active.length===1?' reminder':' reminders')+' still open'):'Nothing open')+(pr?' · paused for '+pr:'');
+  var total=state.items.length, ratio=total?done.length/total:0;
+  $('#ringBar').style.strokeDashoffset=String(169.65*(1-ratio));
+  $('#ringNum').textContent=done.length+'/'+total;
+  $('#ring').setAttribute('aria-label',done.length+' of '+total+' done');
+}
+
+/* ---------- actions ---------- */
+function toggle(id){
+  var it=state.items.find(function(i){return i.id===id});if(!it)return;
+  it.done=!it.done;
+  if(it.done){it.doneAt=Date.now()}else{it.nextDue=Date.now()+it.everyH*3600000}
+  save();render();
+}
+function remove(id){state.items=state.items.filter(function(i){return i.id!==id});save();render()}
+
+$('#addForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var title=$('#titleIn').value.trim();if(!title)return;
+  var h=selectedEvery;
+  state.items.push({id:uid(),title:title,note:$('#noteIn').value.trim(),everyH:h,nextDue:Date.now()+h*3600000,done:false,created:Date.now()});
+  $('#titleIn').value='';$('#noteIn').value='';
+  save();render();
+  toast('Added. First reminder in '+h+(h===1?' hour':' hours'));
+  $('#titleIn').focus();
+});
+$('#clearDone').addEventListener('click',function(){state.items=state.items.filter(function(i){return !i.done});save();render()});
+$('#notifBtn').addEventListener('click',function(){
+  Notification.requestPermission().then(function(){updateBanner();if(Notification.permission==='granted')toast('Notifications are on')});
+});
+$('#testBtn').addEventListener('click',function(){
+  if(!('Notification' in window)||Notification.permission!=='granted'){toast('Turn on notifications first');updateBanner();return}
+  notify({id:'test',title:'Test from Reminderer',note:'Notifications are working.'});
+});
+
+/* interval chips for the add form */
+(function(){
+  var wrap=$('#everyChips');
+  INTERVALS.forEach(function(h){
+    var b=document.createElement('button');b.type='button';b.textContent=h===24?'1 day':h+' h';
+    b.setAttribute('aria-pressed',h===selectedEvery?'true':'false');
+    b.addEventListener('click',function(){
+      selectedEvery=h;
+      Array.prototype.forEach.call(wrap.children,function(c){c.setAttribute('aria-pressed','false')});
+      b.setAttribute('aria-pressed','true');
+    });
+    wrap.appendChild(b);
+  });
+})();
+
+function bindSettings(){
+  var s=state.settings;
+  $('#quietOn').checked=!!s.quietOn;$('#qStart').value=s.qStart;$('#qEnd').value=s.qEnd;
+  $('#schoolOn').checked=!!s.schoolOn;$('#sStart').value=s.sStart;$('#sEnd').value=s.sEnd;
+  function upd(){
+    s.quietOn=$('#quietOn').checked;s.qStart=$('#qStart').value||'22:00';s.qEnd=$('#qEnd').value||'08:00';
+    s.schoolOn=$('#schoolOn').checked;s.sStart=$('#sStart').value||'08:30';s.sEnd=$('#sEnd').value||'15:00';
+    save();render();
+  }
+  ['#quietOn','#qStart','#qEnd','#schoolOn','#sStart','#sEnd'].forEach(function(id){$(id).addEventListener('change',upd)});
+  var days=[['Mon',1],['Tue',2],['Wed',3],['Thu',4],['Fri',5],['Sat',6],['Sun',0]], wrap=$('#schoolDays');
+  days.forEach(function(d){
+    var b=document.createElement('button');b.type='button';b.textContent=d[0];
+    b.setAttribute('aria-pressed',s.schoolDays.indexOf(d[1])>-1?'true':'false');
+    b.addEventListener('click',function(){
+      var i=s.schoolDays.indexOf(d[1]);
+      if(i>-1)s.schoolDays.splice(i,1);else s.schoolDays.push(d[1]);
+      b.setAttribute('aria-pressed',i>-1?'false':'true');
+      save();render();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;$('#installBtn').hidden=false});
+$('#installBtn').addEventListener('click',function(){
+  if(!deferredInstall)return;deferredInstall.prompt();
+  deferredInstall.userChoice.finally(function(){deferredInstall=null;$('#installBtn').hidden=true});
+});
+window.addEventListener('appinstalled',function(){$('#installBtn').hidden=true;toast('Installed')});
+
+/* ---------- start ---------- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.addEventListener('message',function(e){if(e.data==='reload'){load().then(render)}});
+}
+load().then(function(){
+  bindSettings();updateBanner();check();
+  setInterval(check,30000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden){load().then(check)}});
+  window.addEventListener('focus',function(){load().then(check)});
+});
+})();
+</script>
+</body>
+</html>
